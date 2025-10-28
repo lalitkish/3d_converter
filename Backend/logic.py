@@ -185,3 +185,38 @@ def create_interactive_3d_plot(npy_file, output_html='interactive_3d_plot.html')
     # Save the figure as an HTML file
     fig.write_html(output_html)
     print(f"Interactive 3D plot saved as {output_html}")
+
+# Main script to call the functions
+def main():
+    # Argument parsing
+    parser = argparse.ArgumentParser(description='Process an image, generate depth data, and optionally create a 3D model and interactive plot.')
+    parser.add_argument('--input', type=str, default="./input_image.jpg", help='Path to the input image file')
+    parser.add_argument('--interactive-plot', action='store_true', help='Generate interactive 3D plot (default: False)')
+    parser.add_argument('--output-dir', type=str, default="./output", help='Directory to save the output files')
+    parser.add_argument('--target-dimension', type=int, default=300, help='Target dimension for the 3D model downsampling')
+    parser.add_argument('--skip-gendepth', action='store_true', help='Skip depth data generation and use existing depth data')
+    parser.add_argument('--z-scale', type=float, default=50, help='Z scale for adjusting the height in the 3D model')
+
+    args = parser.parse_args()
+
+    # Ensure output directory exists
+    os.makedirs(args.output_dir, exist_ok=True)
+
+    # Process the image and get depth data (unless skip-gendepth is True)
+    if not args.skip_gendepth:
+        npy_file = process_image_get_depth_data(args.input, args.output_dir)
+    else:
+        # If skipping depth generation, ensure the depth data exists
+        npy_file = os.path.join(args.output_dir, "output_depth_data.npy")
+        if not os.path.exists(npy_file):
+            raise FileNotFoundError(f"Depth data not found at {npy_file}. Please generate depth data first or provide the correct path.")
+
+    # Conditionally create an interactive 3D plot
+    if args.interactive_plot:
+        create_interactive_3d_plot(npy_file, output_html=os.path.join(args.output_dir, 'interactive_3d_plot.html'))
+
+    # Convert depth data to 3D model, passing the target dimension and z-scale
+    depth_data_to_3d_model(npy_file, output_stl_path=os.path.join(args.output_dir, 'output_3d_model.stl'), target_dimension=args.target_dimension, z_scale=args.z_scale)
+
+if __name__ == "__main__":
+    main()
